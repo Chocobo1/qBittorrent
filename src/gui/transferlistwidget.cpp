@@ -153,6 +153,7 @@ TransferListWidget::TransferListWidget(QWidget *parent, MainWindow *main_window)
 
     editHotkey = new QShortcut(QKeySequence("F2"), this, SLOT(renameSelectedTorrent()), 0, Qt::WidgetShortcut);
     deleteHotkey = new QShortcut(QKeySequence::Delete, this, SLOT(deleteSelectedTorrents()), 0, Qt::WidgetShortcut);
+    deleteDirectHotkey = new QShortcut(QKeySequence(Qt::ShiftModifier + Qt::Key_Delete), this, SLOT(deleteSelectedTorrentsSkipConfirm()), 0, Qt::WidgetShortcut);
 }
 
 TransferListWidget::~TransferListWidget()
@@ -166,6 +167,7 @@ TransferListWidget::~TransferListWidget()
     delete listDelegate;
     delete editHotkey;
     delete deleteHotkey;
+    delete deleteDirectHotkey;
     qDebug() << Q_FUNC_INFO << "EXIT";
 }
 
@@ -293,19 +295,25 @@ void TransferListWidget::pauseVisibleTorrents()
     }
 }
 
-void TransferListWidget::deleteSelectedTorrents()
+void TransferListWidget::deleteSelectedTorrents(bool skipConfirm)
 {
     if (main_window->getCurrentTabWidget() != this) return;
 
     const QList<BitTorrent::TorrentHandle *> torrents = getSelectedTorrents();
     if (torrents.empty()) return;
 
+    skipConfirm = skipConfirm | !Preferences::instance()->confirmTorrentDeletion();
     bool delete_local_files = false;
-    if (Preferences::instance()->confirmTorrentDeletion() &&
+    if (!skipConfirm &&
         !DeletionConfirmationDlg::askForDeletionConfirmation(delete_local_files, torrents.size(), torrents[0]->name()))
         return;
     foreach (BitTorrent::TorrentHandle *const torrent, torrents)
         BitTorrent::Session::instance()->deleteTorrent(torrent->hash(), delete_local_files);
+}
+
+void TransferListWidget::deleteSelectedTorrentsSkipConfirm()
+{
+    deleteSelectedTorrents(true);
 }
 
 void TransferListWidget::deleteVisibleTorrents()
