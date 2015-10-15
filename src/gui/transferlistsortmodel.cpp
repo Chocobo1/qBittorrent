@@ -91,11 +91,15 @@ bool TransferListSortModel::lessThan(const QModelIndex &left, const QModelIndex 
         QDateTime vL = left.data().toDateTime();
         QDateTime vR = right.data().toDateTime();
 
-        //not valid dates should be sorted at the bottom.
-        if (!vL.isValid()) return false;
-        if (!vR.isValid()) return true;
-
-        return vL < vR;
+        // invalid dates should be at the bottom.
+        if (!vL.isValid() && !vR.isValid())
+            return lowerPositionThan(left, right);
+        else if (!vL.isValid())
+            return false;
+        else if (!vR.isValid())
+            return true;
+        else
+            return vL < vR;
     }
     else if (column == TorrentModel::TR_PRIORITY) {
         return lowerPositionThan(left, right);
@@ -147,7 +151,7 @@ bool TransferListSortModel::lessThan(const QModelIndex &left, const QModelIndex 
                 QDateTime dateL = model->data(model->index(left.row(), TorrentModel::TR_SEED_DATE)).toDateTime();
                 QDateTime dateR = model->data(model->index(right.row(), TorrentModel::TR_SEED_DATE)).toDateTime();
 
-                //not valid dates should be sorted at the bottom.
+                // invalid dates should be at the bottom.
                 if (!dateL.isValid()) return false;
                 if (!dateR.isValid()) return true;
 
@@ -196,7 +200,7 @@ bool TransferListSortModel::lowerPositionThan(const QModelIndex &left, const QMo
     // Sort according to TR_PRIORITY
     const int queueL = model->data(model->index(left.row(), TorrentModel::TR_PRIORITY)).toInt();
     const int queueR = model->data(model->index(right.row(), TorrentModel::TR_PRIORITY)).toInt();
-    if ((queueL > 0) || (queueR > 0)) {
+    if ((queueL != queueR) && (queueL > 0 || queueR > 0)) {
         if ((queueL > 0) && (queueR > 0))
             return queueL < queueR;
         else
@@ -214,6 +218,10 @@ bool TransferListSortModel::lowerPositionThan(const QModelIndex &left, const QMo
         return false;
     else if (dateR.isValid())
         return true;
+
+    // Try to preserve original order
+    if (left.isValid() && right.isValid())
+        return left.row() < right.row();
 
     // Finally, sort by hash
     const QString hashL(model->torrentHandle(model->index(left.row()))->hash());
