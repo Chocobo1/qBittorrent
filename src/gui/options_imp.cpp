@@ -317,22 +317,16 @@ options_imp::options_imp(QWidget *parent)
 void options_imp::initializeLanguageCombo()
 {
     // List language files
-    const QDir langDir(":/lang");
-    const QStringList langFiles = langDir.entryList(QStringList("qbittorrent_*.qm"), QDir::Files);
-    foreach (const QString langFile, langFiles) {
-        QString localeStr = langFile.mid(12); // remove "qbittorrent_"
-        localeStr.chop(3); // Remove ".qm"
-        QString languageName;
-        if (localeStr.startsWith("eo", Qt::CaseInsensitive)) {
-            // QLocale doesn't work with that locale. Esperanto isn't a "real" language.
-            languageName = QString::fromUtf8(C_LOCALE_ESPERANTO);
-        }
-        else {
-            QLocale locale(localeStr);
-            languageName = languageToLocalizedString(locale);
-        }
-        comboI18n->addItem(/*QIcon(":/icons/flags/"+country+".png"), */ languageName, localeStr);
-        qDebug() << "Supported locale:" << localeStr;
+    const QDir lang_dir(":/lang");
+    const QStringList lang_files = lang_dir.entryList(QStringList() << "qbittorrent_*.qm", QDir::Files);
+    foreach (QString lang_file, lang_files) {
+        QString str = lang_file.mid(12); // remove "qbittorrent_"
+        str.chop(3); // Remove ".qm"
+        QLocale locale(str);
+
+        QString language_name = languageToLocalizedString(locale);
+        comboI18n->addItem(/*QIcon(":/icons/flags/"+country+".png"), */ language_name, locale.name());
+        qDebug() << "Supported locale:" << locale.name();
     }
 }
 
