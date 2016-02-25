@@ -104,7 +104,7 @@ private:
     void initializeLanguageCombo();
     static QString languageToLocalizedString(const QLocale &locale);
     // General options
-    QString getLocale() const;
+    QLocale getLocale() const;
     bool systrayIntegration() const;
     bool minimizeToTray() const;
     bool closeToTray() const;

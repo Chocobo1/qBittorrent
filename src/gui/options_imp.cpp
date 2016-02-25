@@ -405,13 +405,14 @@ void options_imp::saveOptions()
     applyButton->setEnabled(false);
     Preferences* const pref = Preferences::instance();
     // Load the translation
-    QString locale = getLocale();
+    QLocale locale = getLocale();
     if (pref->getLocale() != locale) {
+        QString localeName = ":/lang/qbittorrent_" + locale.bcp47Name();
         QTranslator *translator = new QTranslator;
-        if (translator->load(QString::fromUtf8(":/lang/qbittorrent_") + locale))
-            qDebug("%s locale recognized, using translation.", qPrintable(locale));
+        if (translator->load(localeName))
+            qDebug("%s locale recognized, using translation.", qPrintable(localeName));
         else
-            qDebug("%s locale unrecognized, using default (en).", qPrintable(locale));
+            qDebug("%s locale unrecognized, using default (en).", qPrintable(localeName));
         qApp->installTranslator(translator);
     }
 
@@ -1214,9 +1215,10 @@ QString options_imp::getProxyPassword() const
 }
 
 // Locale Settings
-QString options_imp::getLocale() const
+QLocale options_imp::getLocale() const
 {
-    return comboI18n->itemData(comboI18n->currentIndex(), Qt::UserRole).toString();
+    QString s = comboI18n->itemData(comboI18n->currentIndex(), Qt::UserRole).toString();
+    return QLocale(s);
 }
 
 void options_imp::setLocale(const QLocale &locale)
