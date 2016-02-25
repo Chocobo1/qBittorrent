@@ -114,8 +114,9 @@ options_imp::options_imp(QWidget *parent)
     initializeLanguageCombo();
 
     // Load week days (scheduler)
+    const QLocale l = Preferences::instance()->getLocale();
     for (uint i = 1; i <= 7; ++i)
-        schedule_days->addItem(QDate::longDayName(i, QDate::StandaloneFormat));
+        schedule_days->addItem(l.dayName(i));
 
     // Load options
     loadOptions();
