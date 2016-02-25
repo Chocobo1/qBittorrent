@@ -32,6 +32,7 @@
 #include <QSslCertificate>
 #include <QSslKey>
 #endif
+#include <QLocale>
 #include <QStringList>
 #include <QTranslator>
 #include <QCoreApplication>
@@ -146,7 +147,7 @@ QByteArray prefjson::getPreferences()
 
     // Web UI
     // Language
-    data["locale"] = pref->getLocale();
+    data["locale"] = pref->getLocale().name();
     // HTTP Server
     data["web_ui_port"] = pref->getWebUiPort();
     data["web_ui_upnp"] = pref->useUPnPForWebUIPort();

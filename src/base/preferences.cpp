@@ -95,14 +95,15 @@ void Preferences::setValue(const QString &key, const QVariant &value)
 }
 
 // General options
-QString Preferences::getLocale() const
+QLocale Preferences::getLocale() const
 {
-    return value("Preferences/General/Locale").toString();
+    QString name = value("Preferences/General/Locale", QLocale::system().name()).toString();
+    return QLocale(name);
 }
 
-void Preferences::setLocale(const QString &locale)
+void Preferences::setLocale(const QLocale &locale)
 {
-    setValue("Preferences/General/Locale", locale);
+    setValue("Preferences/General/Locale", locale.name());
 }
 
 bool Preferences::useProgramNotification() const

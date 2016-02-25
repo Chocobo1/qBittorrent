@@ -1225,16 +1225,10 @@ QString options_imp::getLocale() const
     return comboI18n->itemData(comboI18n->currentIndex(), Qt::UserRole).toString();
 }
 
-void options_imp::setLocale(const QString &localeStr)
+void options_imp::setLocale(const QLocale &locale)
 {
-    QString name;
-    if (localeStr.startsWith("eo", Qt::CaseInsensitive)) {
-        name = "eo";
-    }
-    else {
-        QLocale locale(localeStr);
-        name = locale.name();
-    }
+    QString name = locale.name();
+
     // Attempt to find exact match
     int index = comboI18n->findData(name, Qt::UserRole);
     if (index < 0) {

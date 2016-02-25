@@ -95,7 +95,7 @@ private slots:
     void on_btnWebUiCrt_clicked();
     void on_btnWebUiKey_clicked();
     void on_registerDNSBtn_clicked();
-    void setLocale(const QString &locale);
+    void setLocale(const QLocale &locale);
 
 private:
     // Methods

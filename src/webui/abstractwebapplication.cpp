@@ -249,7 +249,7 @@ void AbstractWebApplication::translateDocument(QString& data)
     int i = 0;
     bool found = true;
 
-    const QString locale = Preferences::instance()->getLocale();
+    const QString locale = Preferences::instance()->getLocale().name();
     bool isTranslationNeeded = !locale.startsWith("en") || locale.startsWith("en_AU") || locale.startsWith("en_GB");
 
     while(i < data.size() && found) {

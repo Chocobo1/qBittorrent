@@ -113,8 +113,8 @@ public:
     static Preferences* instance();
 
     // General options
-    QString getLocale() const;
-    void setLocale(const QString &locale);
+    QLocale getLocale() const;
+    void setLocale(const QLocale &locale);
     bool useProgramNotification() const;
     void useProgramNotification(bool use);
     bool deleteTorrentFilesAsDefault() const;

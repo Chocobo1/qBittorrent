@@ -476,20 +476,13 @@ void Application::initializeTranslation()
 {
     Preferences* const pref = Preferences::instance();
     // Load translation
-    QString locale = pref->getLocale();
-
-    if (locale.isEmpty()) {
-        locale = QLocale::system().name();
-        pref->setLocale(locale);
-    }
-
-    if (m_qtTranslator.load(
+    QString locale = pref->getLocale().bcp47Name().replace('-', '_');
+    QString qtLocale = "qt_" + locale;
 #ifdef QBT_USES_QT5
-            QString::fromUtf8("qtbase_") + locale, QLibraryInfo::location(QLibraryInfo::TranslationsPath)) ||
-        m_qtTranslator.load(
+    qtLocale = "qtbase_" + locale;
 #endif
-            QString::fromUtf8("qt_") + locale, QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
-            qDebug("Qt %s locale recognized, using translation.", qPrintable(locale));
+    if (m_qtTranslator.load(qtLocale, QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+        qDebug("Qt %s locale recognized, using translation.", qPrintable(locale));
     }
     else {
         qDebug("Qt %s locale unrecognized, using default (en).", qPrintable(locale));
