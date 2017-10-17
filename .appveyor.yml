@@ -56,3 +56,9 @@ build_script:
   - jom -j2 -f Makefile.Release
 
 test: off
+
+artifacts:
+  - path: src\release\qbittorrent.exe
+    name: exe
+  - path: src\release\qbittorrent.pdb
+    name: pdb
