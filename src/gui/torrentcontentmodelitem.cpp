@@ -74,7 +74,7 @@ qreal TorrentContentModelItem::progress() const
 {
     Q_ASSERT(!isRootItem());
 
-    return (m_size > 0) ? m_progress : 1;
+    return m_progress;
 }
 
 qulonglong TorrentContentModelItem::remaining() const
@@ -87,7 +87,7 @@ qreal TorrentContentModelItem::availability() const
 {
     Q_ASSERT(!isRootItem());
 
-    return (m_size > 0) ? m_availability : 0;
+    return m_availability;
 }
 
 BitTorrent::FilePriority TorrentContentModelItem::priority() const

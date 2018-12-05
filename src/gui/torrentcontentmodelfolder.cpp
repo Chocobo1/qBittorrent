@@ -148,16 +148,19 @@ void TorrentContentModelFolder::recalculateProgress()
 
         if (child->itemType() == FolderType)
             static_cast<TorrentContentModelFolder *>(child)->recalculateProgress();
+
         tProgress += child->progress() * child->size();
         tSize += child->size();
         tRemaining += child->remaining();
     }
 
-    if (!isRootItem() && (tSize > 0)) {
-        m_progress = tProgress / tSize;
-        m_remaining = tRemaining;
-        Q_ASSERT(m_progress <= 1.);
-    }
+    if (isRootItem())
+        return;
+
+    m_progress = (tSize == 0) ? 1 : (tProgress / tSize);
+    m_remaining = tRemaining;
+
+    Q_ASSERT(m_progress <= 1);
 }
 
 void TorrentContentModelFolder::recalculateAvailability()
@@ -171,20 +174,24 @@ void TorrentContentModelFolder::recalculateAvailability()
 
         if (child->itemType() == FolderType)
             static_cast<TorrentContentModelFolder*>(child)->recalculateAvailability();
+
         const qreal childAvailability = child->availability();
-        if (childAvailability >= 0) { // -1 means "no data"
+        if (childAvailability >= 0) {  // -1 means "no data"
             tAvailability += childAvailability * child->size();
             foundAnyData = true;
         }
         tSize += child->size();
     }
 
-    if (!isRootItem() && (tSize > 0) && foundAnyData) {
-        m_availability = tAvailability / tSize;
-        Q_ASSERT(m_availability <= 1.);
+    if (isRootItem())
+        return;
+
+    if (foundAnyData) {
+        m_availability = (tSize == 0) ? 0 : (tAvailability / tSize);
+        Q_ASSERT(m_availability <= 1);
     }
     else {
-        m_availability = -1.;
+        m_availability = -1;
     }
 }
 
