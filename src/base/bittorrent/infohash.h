@@ -1,5 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2020  Mike Tzou <Chocobo1>
  * Copyright (C) 2015  Vladimir Golovnev <glassez@yandex.ru>
  *
  * This program is free software; you can redistribute it and/or
@@ -28,40 +29,61 @@
 
 #pragma once
 
-#include <libtorrent/sha1_hash.hpp>
+// due to forwarded declarations in `libtorrent/info_hash.hpp`
+#include <ostream>
+
+#include <libtorrent/info_hash.hpp>
+#include <libtorrent/version.hpp>
 
 #include <QMetaType>
 #include <QString>
 
 namespace BitTorrent
 {
+    enum class InfoHashFormat
+    {
+        V1,
+        V2,
+        Both
+    };
+
     class InfoHash
     {
     public:
         InfoHash() = default;
-        InfoHash(const lt::sha1_hash &nativeHash);
+        InfoHash(const lt::sha1_hash &hash);
+        InfoHash(const lt::sha256_hash &hash);
+        InfoHash(const lt::info_hash_t &hash);
         InfoHash(const QString &hashString);
         InfoHash(const InfoHash &other) = default;
 
-        static constexpr int length()
+        bool isValid() const;
+
+        InfoHashFormat whichFormat() const;
+        operator lt::sha1_hash() const;
+        operator lt::sha256_hash() const;
+        QString v1_string() const;
+        QString v2_string() const;
+
+        static constexpr int v1_length()
         {
             return lt::sha1_hash::size();
         }
+        static constexpr int v2_length()
+        {
+            return lt::sha256_hash::size();
+        }
 
-        bool isValid() const;
-
-        operator lt::sha1_hash() const;
-        operator QString() const;
+        friend bool operator==(const InfoHash &left, const InfoHash &right);
+        friend bool operator<(const InfoHash &left, const InfoHash &right);
 
     private:
         bool m_valid = false;
-        lt::sha1_hash m_nativeHash;
-        QString m_hashString;
+        lt::info_hash_t m_nativeHash;
+        QString m_hashString[2];  // 0: v1 hash, 1: v2 hash
     };
 
-    bool operator==(const InfoHash &left, const InfoHash &right);
     bool operator!=(const InfoHash &left, const InfoHash &right);
-    bool operator<(const InfoHash &left, const InfoHash &right);
     uint qHash(const InfoHash &key, uint seed);
 }
 

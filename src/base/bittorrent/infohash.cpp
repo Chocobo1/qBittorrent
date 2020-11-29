@@ -1,5 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2020  Mike Tzou <Chocobo1>
  * Copyright (C) 2015  Vladimir Golovnev <glassez@yandex.ru>
  *
  * This program is free software; you can redistribute it and/or
@@ -35,27 +36,89 @@ using namespace BitTorrent;
 
 const int InfoHashTypeId = qRegisterMetaType<InfoHash>();
 
-InfoHash::InfoHash(const lt::sha1_hash &nativeHash)
-    : m_valid(true)
-    , m_nativeHash(nativeHash)
+#if (LIBTORRENT_VERSION_NUM >= 20000) && (LIBTORRENT_VERSION_NUM < 20002)
+namespace std
 {
-    const QByteArray raw = QByteArray::fromRawData(nativeHash.data(), length());
-    m_hashString = QString::fromLatin1(raw.toHex());
+    template <std::ptrdiff_t N>
+    struct hash<libtorrent::digest32<N>>
+    {
+        std::size_t operator()(const libtorrent::digest32<N>& k) const
+        {
+            std::size_t ret;
+            static_assert(N >= sizeof(ret) * 8, "hash is not defined for small digests");
+            // this is OK because digest32<N> is already a hash
+            std::memcpy(&ret, k.data(), sizeof(ret));
+            return ret;
+        }
+    };
+}
+#endif
+
+InfoHashFormat InfoHash::whichFormat() const
+{
+    if (m_nativeHash.has_v1() && m_nativeHash.has_v2())
+        return InfoHashFormat::Both;
+    if (m_nativeHash.has_v2())
+        return InfoHashFormat::V2;
+    return InfoHashFormat::V1;
+}
+
+InfoHash::InfoHash(const lt::sha1_hash &hash)
+    : m_valid {true}
+    , m_nativeHash {hash}
+{
+    const QByteArray raw = QByteArray::fromRawData(hash.data(), v1_length());
+    m_hashString[0] = QString::fromLatin1(raw.toHex());
+}
+
+InfoHash::InfoHash(const lt::sha256_hash &hash)
+    : m_valid {true}
+    , m_nativeHash {hash}
+{
+    const QByteArray raw = QByteArray::fromRawData(hash.data(), v2_length());
+    m_hashString[1] = QString::fromLatin1(raw.toHex());
+}
+
+InfoHash::InfoHash(const lt::info_hash_t &hash)
+    : m_valid {true}
+    , m_nativeHash {hash}
+{
+    if (hash.has_v1())
+    {
+        const QByteArray raw = QByteArray::fromRawData(hash.v1.data(), v1_length());
+        m_hashString[0] = QString::fromLatin1(raw.toHex());
+    }
+    if (hash.has_v2())
+    {
+        const QByteArray raw = QByteArray::fromRawData(hash.v2.data(), v2_length());
+        m_hashString[1] = QString::fromLatin1(raw.toHex());
+    }
 }
 
 InfoHash::InfoHash(const QString &hashString)
-    : m_valid(false)
 {
-    if (hashString.size() != (length() * 2))
-        return;
+    QByteArray raw;
 
-    const QByteArray raw = QByteArray::fromHex(hashString.toLatin1());
-    if (raw.size() != length())  // QByteArray::fromHex() will skip over invalid characters
-        return;
+    if (hashString.size() == (v1_length() * 2))
+    {
+        raw = QByteArray::fromHex(hashString.toLatin1());
+        if (raw.size() != v1_length())  // QByteArray::fromHex() will skip over invalid characters
+            return;
+
+        m_hashString[0] = hashString;
+        m_nativeHash = lt::info_hash_t {lt::sha1_hash {raw.constData()}};
+    }
+    else if (hashString.size() == (v2_length() * 2))
+    {
+        raw = QByteArray::fromHex(hashString.toLatin1());
+        if (raw.size() != v2_length())  // QByteArray::fromHex() will skip over invalid characters
+            return;
+
+        m_hashString[1] = hashString;
+        m_nativeHash = lt::info_hash_t {lt::sha256_hash {raw.constData()}};
+    }
 
     m_valid = true;
-    m_hashString = hashString;
-    m_nativeHash.assign(raw.constData());
 }
 
 bool InfoHash::isValid() const
@@ -65,18 +128,35 @@ bool InfoHash::isValid() const
 
 InfoHash::operator lt::sha1_hash() const
 {
-    return m_nativeHash;
+    return m_nativeHash.v1;
 }
 
-InfoHash::operator QString() const
+InfoHash::operator lt::sha256_hash() const
 {
-    return m_hashString;
+    return m_nativeHash.v2;
 }
 
-bool BitTorrent::operator==(const InfoHash &left, const InfoHash &right)
+QString InfoHash::v1_string() const
 {
-    return (static_cast<lt::sha1_hash>(left)
-            == static_cast<lt::sha1_hash>(right));
+    return m_hashString[0];
+}
+
+QString InfoHash::v2_string() const
+{
+    return m_hashString[1];
+}
+
+namespace BitTorrent
+{
+    bool operator==(const InfoHash &left, const InfoHash &right)
+    {
+        return left.m_nativeHash == right.m_nativeHash;
+    }
+
+    bool operator<(const InfoHash &left, const InfoHash &right)
+    {
+        return left.m_nativeHash < right.m_nativeHash;
+    }
 }
 
 bool BitTorrent::operator!=(const InfoHash &left, const InfoHash &right)
@@ -84,12 +164,17 @@ bool BitTorrent::operator!=(const InfoHash &left, const InfoHash &right)
     return !(left == right);
 }
 
-bool BitTorrent::operator<(const InfoHash &left, const InfoHash &right)
-{
-    return static_cast<lt::sha1_hash>(left) < static_cast<lt::sha1_hash>(right);
-}
-
 uint BitTorrent::qHash(const InfoHash &key, const uint seed)
 {
-    return ::qHash((std::hash<lt::sha1_hash> {})(key), seed);
+    switch (key.whichFormat())
+    {
+    case InfoHashFormat::V1:
+        return ::qHash((std::hash<lt::sha1_hash> {})(static_cast<lt::sha1_hash>(key)), seed);
+    case InfoHashFormat::V2:
+        return ::qHash((std::hash<lt::sha256_hash> {})(static_cast<lt::sha256_hash>(key)), seed);
+    case InfoHashFormat::Both:
+    default:
+        return ::qHash((std::hash<lt::sha256_hash> {})(static_cast<lt::sha256_hash>(key)), seed)
+            ^ ::qHash((std::hash<lt::sha1_hash> {})(static_cast<lt::sha1_hash>(key)));
+    };
 }

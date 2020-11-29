@@ -123,7 +123,7 @@ TorrentImpl::TorrentImpl(Session *session, lt::session *nativeSession
     if (m_useAutoTMM)
         m_savePath = Utils::Fs::toNativePath(m_session->categorySavePath(m_category));
 
-    m_hash = InfoHash {m_nativeHandle.info_hash()};
+    m_hash = InfoHash {m_nativeHandle.info_hashes()};
     if (m_ltAddTorrentParams.ti)
     {
         // Initialize it only if torrent is added with metadata.
@@ -185,7 +185,7 @@ QString TorrentImpl::name() const
     if (!name.isEmpty())
         return name;
 
-    return m_hash;
+    return m_hash.v1_string();
 }
 
 QDateTime TorrentImpl::creationDate() const

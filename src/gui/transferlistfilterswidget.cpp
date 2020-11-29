@@ -577,7 +577,7 @@ void TrackerFiltersList::applyFilter(const int row)
 
 void TrackerFiltersList::handleNewTorrent(BitTorrent::Torrent *const torrent)
 {
-    const BitTorrent::InfoHash hash {torrent->hash()};
+    const BitTorrent::InfoHash hash {torrent->hash().v1_string()};
     const QVector<BitTorrent::TrackerEntry> trackers {torrent->trackers()};
     for (const BitTorrent::TrackerEntry &tracker : trackers)
         addItem(tracker.url(), hash);
@@ -591,7 +591,7 @@ void TrackerFiltersList::handleNewTorrent(BitTorrent::Torrent *const torrent)
 
 void TrackerFiltersList::torrentAboutToBeDeleted(BitTorrent::Torrent *const torrent)
 {
-    const BitTorrent::InfoHash hash {torrent->hash()};
+    const BitTorrent::InfoHash hash {torrent->hash().v1_string()};
     const QVector<BitTorrent::TrackerEntry> trackers {torrent->trackers()};
     for (const BitTorrent::TrackerEntry &tracker : trackers)
         removeItem(tracker.url(), hash);
@@ -743,33 +743,33 @@ void TransferListFiltersWidget::setDownloadTrackerFavicon(bool value)
 void TransferListFiltersWidget::addTrackers(const BitTorrent::Torrent *torrent, const QVector<BitTorrent::TrackerEntry> &trackers)
 {
     for (const BitTorrent::TrackerEntry &tracker : trackers)
-        m_trackerFilters->addItem(tracker.url(), torrent->hash());
+        m_trackerFilters->addItem(tracker.url(), torrent->hash().v1_string());
 }
 
 void TransferListFiltersWidget::removeTrackers(const BitTorrent::Torrent *torrent, const QVector<BitTorrent::TrackerEntry> &trackers)
 {
     for (const BitTorrent::TrackerEntry &tracker : trackers)
-        m_trackerFilters->removeItem(tracker.url(), torrent->hash());
+        m_trackerFilters->removeItem(tracker.url(), torrent->hash().v1_string());
 }
 
 void TransferListFiltersWidget::changeTrackerless(const BitTorrent::Torrent *torrent, const bool trackerless)
 {
-    m_trackerFilters->changeTrackerless(trackerless, torrent->hash());
+    m_trackerFilters->changeTrackerless(trackerless, torrent->hash().v1_string());
 }
 
 void TransferListFiltersWidget::trackerSuccess(const BitTorrent::Torrent *torrent, const QString &tracker)
 {
-    emit trackerSuccess(torrent->hash(), tracker);
+    emit trackerSuccess(torrent->hash().v1_string(), tracker);
 }
 
 void TransferListFiltersWidget::trackerWarning(const BitTorrent::Torrent *torrent, const QString &tracker)
 {
-    emit trackerWarning(torrent->hash(), tracker);
+    emit trackerWarning(torrent->hash().v1_string(), tracker);
 }
 
 void TransferListFiltersWidget::trackerError(const BitTorrent::Torrent *torrent, const QString &tracker)
 {
-    emit trackerError(torrent->hash(), tracker);
+    emit trackerError(torrent->hash().v1_string(), tracker);
 }
 
 void TransferListFiltersWidget::onCategoryFilterStateChanged(bool enabled)

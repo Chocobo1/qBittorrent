@@ -191,7 +191,7 @@ bool TorrentFilter::matchHash(const BitTorrent::Torrent *const torrent) const
 {
     if (m_hashSet == AnyHash) return true;
 
-    return m_hashSet.contains(torrent->hash());
+    return m_hashSet.contains(torrent->hash().v1_string());
 }
 
 bool TorrentFilter::matchCategory(const BitTorrent::Torrent *const torrent) const

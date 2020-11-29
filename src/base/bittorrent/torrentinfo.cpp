@@ -374,7 +374,7 @@ QVector<QByteArray> TorrentInfo::pieceHashes() const
     hashes.reserve(count);
 
     for (int i = 0; i < count; ++i)
-        hashes += {m_nativeInfo->hash_for_piece_ptr(lt::piece_index_t {i}), InfoHash::length()};
+        hashes += {m_nativeInfo->hash_for_piece_ptr(lt::piece_index_t {i}), InfoHash::v1_length()};
 
     return hashes;
 }

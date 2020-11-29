@@ -471,7 +471,7 @@ void SyncController::maindataAction()
         if (iterTorrents != lastResponse.end())
         {
             const QVariantHash lastResponseTorrents = iterTorrents->toHash();
-            const auto iterHash = lastResponseTorrents.find(torrentHash);
+            const auto iterHash = lastResponseTorrents.find(torrentHash.v1_string());
 
             if (iterHash != lastResponseTorrents.end())
             {
@@ -488,9 +488,9 @@ void SyncController::maindataAction()
         }
 
         for (const BitTorrent::TrackerEntry &tracker : asConst(torrent->trackers()))
-            trackers[tracker.url()] << torrentHash;
+            trackers[tracker.url()] << torrentHash.v1_string();
 
-        torrents[torrentHash] = map;
+        torrents[torrentHash.v1_string()] = map;
     }
     data["torrents"] = torrents;
 

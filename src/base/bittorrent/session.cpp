@@ -1802,7 +1802,7 @@ bool Session::deleteTorrent(const InfoHash &hash, const DeleteOption deleteOptio
     TorrentImpl *const torrent = m_torrents.take(hash);
     if (!torrent) return false;
 
-    qDebug("Deleting torrent with hash: %s", qUtf8Printable(torrent->hash()));
+    qDebug("Deleting torrent with hash: %s", qUtf8Printable(torrent->hash().v1_string()));
     emit torrentAboutToBeRemoved(torrent);
 
     // Remove it from session
@@ -1856,8 +1856,8 @@ bool Session::deleteTorrent(const InfoHash &hash, const DeleteOption deleteOptio
     }
 
     // Remove it from torrent resume directory
-    const QString resumedataFile = QString::fromLatin1("%1.fastresume").arg(torrent->hash());
-    const QString metadataFile = QString::fromLatin1("%1.torrent").arg(torrent->hash());
+    const QString resumedataFile = QString::fromLatin1("%1.fastresume").arg(torrent->hash().v1_string());
+    const QString metadataFile = QString::fromLatin1("%1.torrent").arg(torrent->hash().v1_string());
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
     QMetaObject::invokeMethod(m_resumeDataSavingManager, [this, resumedataFile, metadataFile]()
     {
@@ -2207,7 +2207,7 @@ bool Session::loadTorrent(LoadTorrentParams params)
     p.max_uploads = maxUploadsPerTorrent();
 
     const bool hasMetadata = (p.ti && p.ti->is_valid());
-    const InfoHash hash = (hasMetadata ? p.ti->info_hash() : p.info_hash);
+    const InfoHash hash = (hasMetadata ? p.ti->info_hashes() : p.info_hashes);
     m_loadingTorrents.insert(hash, params);
 
     // Adding torrent to BitTorrent session
@@ -2250,7 +2250,7 @@ bool Session::downloadMetadata(const MagnetUri &magnetUri)
     if (m_downloadedMetadata.contains(hash)) return false;
 
     qDebug("Adding torrent to preload metadata...");
-    qDebug(" -> Hash: %s", qUtf8Printable(hash));
+    qDebug(" -> Hash: %s", qUtf8Printable(hash.v1_string()));
     qDebug(" -> Name: %s", qUtf8Printable(name));
 
     lt::add_torrent_params p = magnetUri.addTorrentParams();
@@ -2266,7 +2266,7 @@ bool Session::downloadMetadata(const MagnetUri &magnetUri)
     p.max_connections = maxConnectionsPerTorrent();
     p.max_uploads = maxUploadsPerTorrent();
 
-    const QString savePath = Utils::Fs::tempPath() + static_cast<QString>(hash);
+    const QString savePath = Utils::Fs::tempPath() + hash.v1_string();
     p.save_path = Utils::Fs::toNativePath(savePath).toStdString();
 
     // Forced start
@@ -2299,7 +2299,7 @@ void Session::exportTorrentFile(const Torrent *torrent, TorrentExportFolder fold
              ((folder == TorrentExportFolder::Finished) && !finishedTorrentExportDirectory().isEmpty()));
 
     const QString validName = Utils::Fs::toValidFileSystemName(torrent->name());
-    const QString torrentFilename = QString::fromLatin1("%1.torrent").arg(torrent->hash());
+    const QString torrentFilename = QString::fromLatin1("%1.torrent").arg(torrent->hash().v1_string());
     QString torrentExportFilename = QString::fromLatin1("%1.torrent").arg(validName);
     const QString torrentPath = QDir(m_resumeFolderPath).absoluteFilePath(torrentFilename);
     const QDir exportPath(folder == TorrentExportFolder::Regular ? torrentExportDirectory() : finishedTorrentExportDirectory());
@@ -2366,7 +2366,7 @@ void Session::saveResumeData()
 void Session::saveTorrentsQueue()
 {
     // store hash in textual representation
-    QMap<int, QString> queue; // Use QMap since it should be ordered by key
+    QMap<int, InfoHash> queue; // Use QMap since it should be ordered by key
     for (const TorrentImpl *torrent : asConst(m_torrents))
     {
         // We require actual (non-cached) queue position here!
@@ -2376,9 +2376,9 @@ void Session::saveTorrentsQueue()
     }
 
     QByteArray data;
-    data.reserve(((InfoHash::length() * 2) + 1) * queue.size());
-    for (const QString &hash : asConst(queue))
-        data += (hash.toLatin1() + '\n');
+    data.reserve(((InfoHash::v1_length() * 2) + 1) * queue.size());
+    for (const InfoHash &hash : asConst(queue))
+        data += (hash.v1_string().toLatin1() + '\n');
 
     const QString filename = QLatin1String {"queue"};
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
@@ -3852,7 +3852,7 @@ void Session::handleTorrentMetadataReceived(TorrentImpl *const torrent)
 {
     // Save metadata
     const QDir resumeDataDir {m_resumeFolderPath};
-    const QString torrentFileName {QString {"%1.torrent"}.arg(torrent->hash())};
+    const QString torrentFileName {QString {"%1.torrent"}.arg(torrent->hash().v1_string())};
     try
     {
         torrent->info().saveToFile(resumeDataDir.absoluteFilePath(torrentFileName));
@@ -3932,7 +3932,7 @@ void Session::handleTorrentResumeDataReady(TorrentImpl *const torrent, const std
     // Separated thread is used for the blocking IO which results in slow processing of many torrents.
     // Copying lt::entry objects around isn't cheap.
 
-    const QString filename = QString::fromLatin1("%1.fastresume").arg(torrent->hash());
+    const QString filename = QString::fromLatin1("%1.fastresume").arg(torrent->hash().v1_string());
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
     QMetaObject::invokeMethod(m_resumeDataSavingManager
         , [this, filename, data]() { m_resumeDataSavingManager->save(filename, data); });
@@ -4010,7 +4010,7 @@ void Session::moveTorrentStorage(const MoveStorageJob &job) const
 {
     const InfoHash infoHash = job.torrentHandle.info_hash();
     const TorrentImpl *torrent = m_torrents.value(infoHash);
-    const QString torrentName = (torrent ? torrent->name() : QString {infoHash});
+    const QString torrentName = (torrent ? torrent->name() : infoHash.v1_string());
     LogMsg(tr("Moving \"%1\" to \"%2\"...").arg(torrentName, job.path));
 
     job.torrentHandle.move_storage(job.path.toUtf8().constData()
@@ -4583,7 +4583,7 @@ void Session::createTorrent(const lt::torrent_handle &nativeHandle)
         {
             // Backup torrent file
             const QDir resumeDataDir {m_resumeFolderPath};
-            const QString torrentFileName {QString {"%1.torrent"}.arg(torrent->hash())};
+            const QString torrentFileName {QString {"%1.torrent"}.arg(torrent->hash().v1_string())};
             try
             {
                 torrent->info().saveToFile(resumeDataDir.absoluteFilePath(torrentFileName));
@@ -4641,7 +4641,7 @@ void Session::handleAddTorrentAlert(const lt::add_torrent_alert *p)
 
 void Session::handleTorrentRemovedAlert(const lt::torrent_removed_alert *p)
 {
-    const InfoHash infoHash {p->info_hash};
+    const InfoHash infoHash {p->info_hashes};
 
     const auto removingTorrentDataIter = m_removingTorrents.find(infoHash);
     if (removingTorrentDataIter != m_removingTorrents.end())
@@ -4656,7 +4656,7 @@ void Session::handleTorrentRemovedAlert(const lt::torrent_removed_alert *p)
 
 void Session::handleTorrentDeletedAlert(const lt::torrent_deleted_alert *p)
 {
-    const InfoHash infoHash {p->info_hash};
+    const InfoHash infoHash {p->info_hashes};
     const auto removingTorrentDataIter = m_removingTorrents.find(infoHash);
 
     if (removingTorrentDataIter == m_removingTorrents.end())
@@ -4669,7 +4669,7 @@ void Session::handleTorrentDeletedAlert(const lt::torrent_deleted_alert *p)
 
 void Session::handleTorrentDeleteFailedAlert(const lt::torrent_delete_failed_alert *p)
 {
-    const InfoHash infoHash {p->info_hash};
+    const InfoHash infoHash {p->info_hashes};
     const auto removingTorrentDataIter = m_removingTorrents.find(infoHash);
 
     if (removingTorrentDataIter == m_removingTorrents.end())
@@ -4694,7 +4694,7 @@ void Session::handleTorrentDeleteFailedAlert(const lt::torrent_delete_failed_ale
 
 void Session::handleMetadataReceivedAlert(const lt::metadata_received_alert *p)
 {
-    const InfoHash hash {p->handle.info_hash()};
+    const InfoHash hash {p->handle.info_hashes()};
     const auto downloadedMetadataIter = m_downloadedMetadata.find(hash);
 
     if (downloadedMetadataIter != m_downloadedMetadata.end())
@@ -4920,8 +4920,8 @@ void Session::handleStorageMovedAlert(const lt::storage_moved_alert *p)
     Q_ASSERT(newPath == currentJob.path);
 
     const InfoHash infoHash = currentJob.torrentHandle.info_hash();
-    TorrentImpl *torrent = m_torrents.value(infoHash);
-    const QString torrentName = (torrent ? torrent->name() : QString {infoHash});
+    const TorrentImpl *torrent = m_torrents.value(infoHash);
+    const QString torrentName = (torrent ? torrent->name() : infoHash.v1_string());
     LogMsg(tr("\"%1\" is successfully moved to \"%2\".").arg(torrentName, newPath));
 
     handleMoveTorrentStorageJobFinished();
@@ -4935,8 +4935,8 @@ void Session::handleStorageMovedFailedAlert(const lt::storage_moved_failed_alert
     Q_ASSERT(currentJob.torrentHandle == p->handle);
 
     const InfoHash infoHash = currentJob.torrentHandle.info_hash();
-    TorrentImpl *torrent = m_torrents.value(infoHash);
-    const QString torrentName = (torrent ? torrent->name() : QString {infoHash});
+    const TorrentImpl *torrent = m_torrents.value(infoHash);
+    const QString torrentName = (torrent ? torrent->name() : infoHash.v1_string());
     const QString currentLocation = QString::fromStdString(p->handle.status(lt::torrent_handle::query_save_path).save_path);
     const QString errorMessage = QString::fromStdString(p->message());
     LogMsg(tr("Failed to move \"%1\" from \"%2\" to \"%3\". Reason: %4.")
@@ -4952,7 +4952,7 @@ void Session::handleStateUpdateAlert(const lt::state_update_alert *p)
 
     for (const lt::torrent_status &status : p->status)
     {
-        TorrentImpl *const torrent = m_torrents.value(status.info_hash);
+        TorrentImpl *const torrent = m_torrents.value(status.info_hashes);
 
         if (!torrent)
             continue;

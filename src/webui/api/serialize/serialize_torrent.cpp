@@ -87,7 +87,7 @@ QVariantMap serialize(const BitTorrent::Torrent &torrent)
 {
     QVariantMap ret =
     {
-        {KEY_TORRENT_HASH, QString(torrent.hash())},
+        {KEY_TORRENT_HASH, torrent.hash().v1_string()},
         {KEY_TORRENT_NAME, torrent.name()},
         {KEY_TORRENT_MAGNET_URI, torrent.createMagnetURI()},
         {KEY_TORRENT_SIZE, torrent.wantedSize()},

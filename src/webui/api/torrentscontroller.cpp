@@ -798,7 +798,7 @@ void TorrentsController::addPeersAction()
             return torrent->connectPeer(peer);
         });
 
-        results[torrent->hash()] = QJsonObject
+        results[torrent->hash().v1_string()] = QJsonObject
         {
             {"added", peersAdded},
             {"failed", (peers.size() - peersAdded)}
