@@ -1,5 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2021  Mike Tzou (Chocobo1)
  * Copyright (C) 2010  Christophe Dumez <chris@qbittorrent.org>
  *
  * This program is free software; you can redistribute it and/or
@@ -29,6 +30,7 @@
 #pragma once
 
 #include <QObject>
+#include <QString>
 
 namespace Net
 {
@@ -41,18 +43,17 @@ class ProgramUpdater final : public QObject
     Q_DISABLE_COPY(ProgramUpdater)
 
 public:
-    explicit ProgramUpdater(QObject *parent = nullptr, bool invokedByUser = false);
+    explicit ProgramUpdater(QObject *parent = nullptr);
 
     void checkForUpdates() const;
     void updateProgram() const;
 
 signals:
-    void updateCheckFinished(bool updateAvailable, const QString &version, bool invokedByUser);
+    void updateCheckFinished(bool updateAvailable, const QString &newVersion);
 
 private slots:
     void rssDownloadFinished(const Net::DownloadResult &result);
 
 private:
-    QString m_updateUrl;
-    const bool m_invokedByUser;
+    QString m_updateURL;
 };
