@@ -63,15 +63,16 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkAddressEntry>
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-#include <QNetworkConfigurationManager>
-#endif
 #include <QNetworkInterface>
 #include <QRegularExpression>
 #include <QString>
 #include <QThread>
 #include <QTimer>
 #include <QUuid>
+
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#include <QNetworkConfigurationManager>
+#endif
 
 #include "base/algorithm.h"
 #include "base/global.h"
@@ -534,10 +535,26 @@ Session::Session(QObject *parent)
 
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     // Network configuration monitor
-    connect(m_networkManager, &QNetworkConfigurationManager::onlineStateChanged, this, &Session::networkOnlineStateChanged);
     connect(m_networkManager, &QNetworkConfigurationManager::configurationAdded, this, &Session::networkConfigurationChange);
     connect(m_networkManager, &QNetworkConfigurationManager::configurationRemoved, this, &Session::networkConfigurationChange);
     connect(m_networkManager, &QNetworkConfigurationManager::configurationChanged, this, &Session::networkConfigurationChange);
+#else
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 3, 0))
+    const bool isNetInfoLoaded = QNetworkInformation::loadDefaultBackend();
+#else
+    const QStringList netInfoBackends = QNetworkInformation::availableBackends();
+    const bool isNetInfoLoaded = (!netInfoBackends.isEmpty() && QNetworkInformation::load(netInfoBackends.first()));
+#endif
+    if (isNetInfoLoaded)
+    {
+        const auto *netInfoInstance = QNetworkInformation::instance();
+        if (netInfoInstance)
+        {
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 3, 0))
+            connect(netInfoInstance, &QNetworkInformation::transportMediumChanged, this, &Session::networkTransportMediumChanged);
+#endif
+        }
+    }
 #endif
 
     m_fileSearcher = new FileSearcher;
@@ -2612,11 +2629,6 @@ void Session::setDownloadPath(const Path &path)
 }
 
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-void Session::networkOnlineStateChanged(const bool online)
-{
-    LogMsg(tr("System network status changed to %1", "e.g: System network status changed to ONLINE").arg(online ? tr("ONLINE") : tr("OFFLINE")), Log::INFO);
-}
-
 void Session::networkConfigurationChange(const QNetworkConfiguration &cfg)
 {
     const QString configuredInterfaceName = networkInterface();
@@ -2628,10 +2640,39 @@ void Session::networkConfigurationChange(const QNetworkConfiguration &cfg)
 
     if (configuredInterfaceName == changedInterface)
     {
-        LogMsg(tr("Network configuration of %1 has changed, refreshing session binding", "e.g: Network configuration of tun0 has changed, refreshing session binding").arg(changedInterface), Log::INFO);
+        LogMsg(tr("Detected network configuration has changed, refreshing network binding. Interface: \"%1\"").arg(changedInterface), Log::INFO);
         configureListeningInterface();
     }
 }
+#else
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 3, 0))
+void Session::networkTransportMediumChanged(const QNetworkInformation::TransportMedium medium)
+{
+    QString mediumString;
+    switch (medium)
+    {
+    case QNetworkInformation::TransportMedium::Unknown:
+        mediumString = tr("Unknown");
+        break;
+    case QNetworkInformation::TransportMedium::Ethernet:
+        mediumString = tr("Ethernet");
+        break;
+    case QNetworkInformation::TransportMedium::Cellular:
+        mediumString = tr("Cellular");
+        break;
+    case QNetworkInformation::TransportMedium::WiFi:
+        mediumString = tr("WiFi");
+        break;
+    case QNetworkInformation::TransportMedium::Bluetooth:
+        mediumString = tr("Bluetooth");
+        break;
+    default:
+        break;
+    }
+    LogMsg(tr("Detected network transport medium has changed, refreshing network binding. New medium: \"%1\"").arg(mediumString), Log::INFO);
+    configureListeningInterface();
+}
+#endif
 #endif
 
 QStringList Session::getListeningIPs() const

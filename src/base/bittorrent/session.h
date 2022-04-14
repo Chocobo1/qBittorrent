@@ -43,6 +43,10 @@
 #include <QtContainerFwd>
 #include <QVector>
 
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 1, 0))
+#include <QNetworkInformation>
+#endif
+
 #include "base/path.h"
 #include "base/settingvalue.h"
 #include "base/types.h"
@@ -53,14 +57,15 @@
 #include "torrentinfo.h"
 #include "trackerentry.h"
 
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-class QNetworkConfiguration;
-class QNetworkConfigurationManager;
-#endif
 class QString;
 class QThread;
 class QTimer;
 class QUrl;
+
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+class QNetworkConfiguration;
+class QNetworkConfigurationManager;
+#endif
 
 class BandwidthScheduler;
 class FileSearcher;
@@ -570,9 +575,11 @@ namespace BitTorrent
         void fileSearchFinished(const TorrentID &id, const Path &savePath, const PathList &fileNames);
 
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-        // Session reconfiguration triggers
-        void networkOnlineStateChanged(bool online);
         void networkConfigurationChange(const QNetworkConfiguration &);
+#else
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 3, 0))
+        void networkTransportMediumChanged(QNetworkInformation::TransportMedium medium);
+#endif
 #endif
 
     private:
