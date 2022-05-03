@@ -1,0 +1,26 @@
+name: CI - Docker
+
+on: [pull_request, push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.head_ref != '' }}
+
+jobs:
+  ci:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build docker image
+        run: |
+          cd dist/docker
+          export \
+            QBT_VERSION=devel
+          docker build \
+            --build-arg QBT_VERSION \
+            -t qbittorrent-nox:"$QBT_VERSION" \
+            .
