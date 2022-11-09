@@ -80,7 +80,6 @@
 #include "base/logger.h"
 #include "base/net/downloadmanager.h"
 #include "base/net/proxyconfigurationmanager.h"
-#include "base/preferences.h"
 #include "base/profile.h"
 #include "base/torrentfileguard.h"
 #include "base/torrentfilter.h"
@@ -1991,27 +1990,16 @@ void SessionImpl::configurePeerClasses()
 
 void SessionImpl::enableTracker(const bool enable)
 {
-    const QString profile = u"embeddedTracker"_qs;
-    auto *portForwarder = Net::PortForwarder::instance();
-
     if (enable)
     {
         if (!m_tracker)
             m_tracker = new Tracker(this);
 
         m_tracker->start();
-
-        const auto *pref = Preferences::instance();
-        if (pref->isTrackerPortForwardingEnabled())
-            portForwarder->setPorts(profile, {static_cast<quint16>(pref->getTrackerPort())});
-        else
-            portForwarder->removePorts(profile);
     }
     else
     {
         delete m_tracker;
-
-        portForwarder->removePorts(profile);
     }
 }
 

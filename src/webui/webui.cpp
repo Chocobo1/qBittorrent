@@ -50,23 +50,14 @@ void WebUI::configure()
 {
     m_isErrored = false; // clear previous error state
 
-    const QString portForwardingProfile = u"webui"_qs;
     const Preferences *pref = Preferences::instance();
     const quint16 port = pref->getWebUiPort();
 
+    const QString portForwardingProfile = u"webui"_qs;
+    auto *portForwarder = Net::PortForwarder::instance();
+
     if (pref->isWebUiEnabled())
     {
-        // Port forwarding
-        auto *portForwarder = Net::PortForwarder::instance();
-        if (pref->useUPnPForWebUIPort())
-        {
-            portForwarder->setPorts(portForwardingProfile, {port});
-        }
-        else
-        {
-            portForwarder->removePorts(portForwardingProfile);
-        }
-
         // http server
         const QString serverAddressString = pref->getWebUiAddress();
         if (!m_httpServer)
@@ -78,7 +69,9 @@ void WebUI::configure()
         {
             if ((m_httpServer->serverAddress().toString() != serverAddressString)
                     || (m_httpServer->serverPort() != port))
+            {
                 m_httpServer->close();
+            }
         }
 
         if (pref->isWebUiHttpsEnabled())
@@ -108,10 +101,13 @@ void WebUI::configure()
         {
             const auto address = ((serverAddressString == u"*") || serverAddressString.isEmpty())
                 ? QHostAddress::Any : QHostAddress(serverAddressString);
-            bool success = m_httpServer->listen(address, port);
-            if (success)
+            const bool isListening = m_httpServer->listen(address, port);
+            if (isListening)
             {
                 LogMsg(tr("Web UI: Now listening on IP: %1, port: %2").arg(serverAddressString).arg(port));
+
+                if (pref->useUPnPForWebUIPort())
+                    portForwarder->setPorts(portForwardingProfile, {port});
             }
             else
             {
@@ -121,6 +117,8 @@ void WebUI::configure()
                 qCritical() << errorMsg;
 
                 m_isErrored = true;
+                portForwarder->removePorts(portForwardingProfile);
+
                 emit fatalError();
             }
         }
@@ -140,7 +138,7 @@ void WebUI::configure()
     }
     else
     {
-        Net::PortForwarder::instance()->removePorts(portForwardingProfile);
+        portForwarder->removePorts(portForwardingProfile);
 
         delete m_httpServer;
         delete m_webapp;

@@ -92,6 +92,7 @@ namespace BitTorrent
 
     public:
         explicit Tracker(QObject *parent = nullptr);
+        ~Tracker();
 
         bool start();
 
@@ -108,5 +109,6 @@ namespace BitTorrent
         Http::Environment m_env;
 
         QHash<TorrentID, TorrentStats> m_torrents;
+        const QString m_portForwardProfile = u"embeddedTracker"_qs;
     };
 }

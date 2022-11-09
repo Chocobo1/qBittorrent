@@ -41,6 +41,7 @@
 #include "base/http/server.h"
 #include "base/http/types.h"
 #include "base/logger.h"
+#include "base/net/portforwarder.h"
 #include "base/preferences.h"
 
 namespace
@@ -201,9 +202,18 @@ Tracker::Tracker(QObject *parent)
 {
 }
 
+Tracker::~Tracker()
+{
+    if (auto *portForwarder = Net::PortForwarder::instance(); portForwarder)
+        portForwarder->removePorts(m_portForwardProfile);
+}
+
 bool Tracker::start()
 {
-    const int port = Preferences::instance()->getTrackerPort();
+    const auto *pref = Preferences::instance();
+    const int port = pref->getTrackerPort();
+
+    auto *portForwarder = Net::PortForwarder::instance();
 
     if (m_server->isListening())
     {
@@ -225,12 +235,16 @@ bool Tracker::start()
     {
         LogMsg(tr("Embedded Tracker: Now listening on IP: %1, port: %2")
             .arg(ip.toString(), QString::number(port)), Log::INFO);
+
+        if (pref->isTrackerPortForwardingEnabled())
+            portForwarder->setPorts(m_portForwardProfile, {static_cast<quint16>(port)});
     }
     else
     {
         LogMsg(tr("Embedded Tracker: Unable to bind to IP: %1, port: %2. Reason: %3")
                 .arg(ip.toString(), QString::number(port), m_server->errorString())
             , Log::WARNING);
+        portForwarder->removePorts(m_portForwardProfile);
     }
 
     return listenSuccess;
