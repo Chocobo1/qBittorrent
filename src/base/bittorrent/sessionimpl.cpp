@@ -582,6 +582,7 @@ SessionImpl::SessionImpl(QObject *parent)
 
 SessionImpl::~SessionImpl()
 {
+    m_isExitting = true;
     m_nativeSession->pause();
 
     if (m_torrentsQueueChanged)
@@ -4699,6 +4700,9 @@ void SessionImpl::handleTorrentInfoHashChanged(TorrentImpl *torrent, const InfoH
 bool SessionImpl::addMoveTorrentStorageJob(TorrentImpl *torrent, const Path &newPath, const MoveStorageMode mode)
 {
     Q_ASSERT(torrent);
+
+    if (m_isExitting)
+        return false;
 
     const lt::torrent_handle torrentHandle = torrent->nativeHandle();
     const Path currentLocation = torrent->actualStorageLocation();
