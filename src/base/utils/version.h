@@ -122,14 +122,14 @@ namespace Utils
             return res;
         }
 
+        friend constexpr auto operator<=>(const ThisType &left, const ThisType &right)
+        {
+            return (left.m_components <=> right.m_components);
+        }
+
         friend constexpr bool operator==(const ThisType &left, const ThisType &right)
         {
             return (left.m_components == right.m_components);
-        }
-
-        friend constexpr bool operator<(const ThisType &left, const ThisType &right)
-        {
-            return (left.m_components < right.m_components);
         }
 
         static Version fromString(const QStringView string, const Version &defaultVersion = {})
@@ -155,22 +155,4 @@ namespace Utils
     private:
         std::array<int, N> m_components {{}};
     };
-
-    template <int N, int Mandatory>
-    constexpr bool operator>(const Version<N, Mandatory> &left, const Version<N, Mandatory> &right)
-    {
-        return (right < left);
-    }
-
-    template <int N, int Mandatory>
-    constexpr bool operator<=(const Version<N, Mandatory> &left, const Version<N, Mandatory> &right)
-    {
-        return !(left > right);
-    }
-
-    template <int N, int Mandatory>
-    constexpr bool operator>=(const Version<N, Mandatory> &left, const Version<N, Mandatory> &right)
-    {
-        return !(left < right);
-    }
 }
