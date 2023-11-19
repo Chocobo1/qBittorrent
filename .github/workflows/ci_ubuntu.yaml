@@ -30,6 +30,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - run: |
+          echo ${{ github.ref }}
+
       - name: Install dependencies
         run: |
           sudo apt update
