@@ -66,7 +66,7 @@
              </widget>
             </item>
             <item>
-             <widget class="FileSystemPathLineEdit" name="textInputPath">
+             <widget class="FileSystemPathLineEdit" name="textInputPath" native="true">
               <property name="acceptDrops">
                <bool>false</bool>
               </property>
@@ -189,7 +189,7 @@
             <item>
              <widget class="QComboBox" name="comboPieceSize">
               <property name="currentIndex">
-               <number>0</number>
+               <number>-1</number>
               </property>
               <property name="minimumContentsLength">
                <number>7</number>
@@ -222,6 +222,23 @@
                </size>
               </property>
              </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QLabel" name="labelSSLRootCert">
+              <property name="toolTip">
+               <string>Leave it empty if you are creating a regular torrent and not an SSL torrent.</string>
+              </property>
+              <property name="text">
+               <string>SSL torrent root certificate:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="FileSystemPathLineEdit" name="SSLRootCertPath" native="true"/>
             </item>
            </layout>
           </item>

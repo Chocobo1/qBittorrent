@@ -163,6 +163,10 @@ void TorrentCreator::run()
             , (m_params.isAlignmentOptimized ? lt::create_torrent::optimize_alignment : lt::create_flags_t {}));
 #endif
 
+        // Set SSL torrent root certificate
+        if (!m_params.rootCert.isNull())
+            newTorrent.set_root_cert(m_params.rootCert.toPem().toStdString());
+
         // Add url seeds
         for (QString seed : asConst(m_params.urlSeeds))
         {

@@ -33,13 +33,16 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QSslCertificate>
 #include <QUrl>
 
 #include "base/bittorrent/session.h"
 #include "base/bittorrent/torrentdescriptor.h"
 #include "base/global.h"
 #include "base/utils/fs.h"
+#include "base/utils/io.h"
 #include "base/utils/misc.h"
+#include "base/utils/net.h"
 #include "ui_torrentcreatordialog.h"
 #include "utils.h"
 
@@ -77,9 +80,12 @@ TorrentCreatorDialog::TorrentCreatorDialog(QWidget *parent, const Path &defaultP
     , m_storeWebSeedList(SETTINGS_KEY(u"WebSeedList"_s))
     , m_storeComments(SETTINGS_KEY(u"Comments"_s))
     , m_storeLastSavePath(SETTINGS_KEY(u"LastSavePath"_s))
+    , m_storeSSLRootCertPath(SETTINGS_KEY(u"SSLTorrentRootCertificatePath"_s))
     , m_storeSource(SETTINGS_KEY(u"Source"_s))
 {
     m_ui->setupUi(this);
+
+    m_ui->textInputPath->setMode(FileSystemPathEdit::Mode::ReadOnly);
 
     m_ui->comboPieceSize->addItem(tr("Auto"), 0);
 #ifdef QBT_USES_LIBTORRENT2
@@ -93,8 +99,11 @@ TorrentCreatorDialog::TorrentCreatorDialog(QWidget *parent, const Path &defaultP
         m_ui->comboPieceSize->addItem(displaySize, size);
     }
 
+    m_ui->SSLRootCertPath->setMode(FileSystemPathEdit::Mode::FileOpen);
+    m_ui->SSLRootCertPath->setDialogCaption(tr("Select root certificate"));
+    m_ui->SSLRootCertPath->setFileNameFilter(tr("Certificate") + u" (*.cer *.crt *.pem)");
+
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Create Torrent"));
-    m_ui->textInputPath->setMode(FileSystemPathEdit::Mode::ReadOnly);
 
     connect(m_ui->addFileButton, &QPushButton::clicked, this, &TorrentCreatorDialog::onAddFileButtonClicked);
     connect(m_ui->addFolderButton, &QPushButton::clicked, this, &TorrentCreatorDialog::onAddFolderButtonClicked);
@@ -219,6 +228,25 @@ void TorrentCreatorDialog::onCreateButtonClicked()
         destPath += TORRENT_FILE_EXTENSION;
     m_storeLastSavePath = destPath.parentPath();
 
+    // Read SSL root certificate
+    QSslCertificate rootCert;
+    if (const Path certPath = m_ui->SSLRootCertPath->selectedPath(); !certPath.isEmpty())
+    {
+        const auto readResult = Utils::IO::readFile(certPath, Utils::Net::MAX_SSL_FILE_SIZE);
+        if (!readResult)
+        {
+            QMessageBox::critical(this, tr("Torrent creation failed"), readResult.error().message);
+            return;
+        }
+
+        rootCert = QSslCertificate(readResult.value());
+        if (rootCert.isNull())
+        {
+            QMessageBox::critical(this, tr("Torrent creation failed"), tr("SSL torrent root certificate is not valid."));
+            return;
+        }
+    }
+
     // Disable dialog & set busy cursor
     setInteractionEnabled(false);
     setCursor(QCursor(Qt::WaitCursor));
@@ -237,6 +265,7 @@ void TorrentCreatorDialog::onCreateButtonClicked()
         .pieceSize = getPieceSize(),
         .inputPath = inputPath,
         .savePath = destPath,
+        .rootCert = rootCert,
         .comment = m_ui->txtComment->toPlainText(),
         .source = m_ui->lineEditSource->text(),
         .trackers = trackers,
@@ -324,6 +353,7 @@ void TorrentCreatorDialog::setInteractionEnabled(const bool enabled) const
     m_ui->lineEditSource->setEnabled(enabled);
     m_ui->comboPieceSize->setEnabled(enabled);
     m_ui->buttonCalcTotalPieces->setEnabled(enabled);
+    m_ui->SSLRootCertPath->setEnabled(enabled);
     m_ui->checkPrivate->setEnabled(enabled);
     m_ui->checkStartSeeding->setEnabled(enabled);
     m_ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(enabled);
@@ -341,6 +371,7 @@ void TorrentCreatorDialog::saveSettings()
     m_storeLastAddPath = m_ui->textInputPath->selectedPath();
 
     m_storePieceSize = m_ui->comboPieceSize->currentIndex();
+    m_storeSSLRootCertPath = m_ui->SSLRootCertPath->selectedPath();
     m_storePrivateTorrent = m_ui->checkPrivate->isChecked();
     m_storeStartSeeding = m_ui->checkStartSeeding->isChecked();
     m_storeIgnoreRatio = m_ui->checkIgnoreShareLimits->isChecked();
@@ -364,6 +395,7 @@ void TorrentCreatorDialog::loadSettings()
     m_ui->textInputPath->setSelectedPath(m_storeLastAddPath.get(Utils::Fs::homePath()));
 
     m_ui->comboPieceSize->setCurrentIndex(m_storePieceSize);
+    m_ui->SSLRootCertPath->setSelectedPath(m_storeSSLRootCertPath);
     m_ui->checkPrivate->setChecked(m_storePrivateTorrent);
     m_ui->checkStartSeeding->setChecked(m_storeStartSeeding);
     m_ui->checkIgnoreShareLimits->setChecked(m_storeIgnoreRatio);

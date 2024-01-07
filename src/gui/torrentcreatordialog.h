@@ -95,5 +95,6 @@ private:
     SettingValue<QString> m_storeWebSeedList;
     SettingValue<QString> m_storeComments;
     SettingValue<Path> m_storeLastSavePath;
+    SettingValue<Path> m_storeSSLRootCertPath;
     SettingValue<QString> m_storeSource;
 };

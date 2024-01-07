@@ -32,6 +32,7 @@
 
 #include <QObject>
 #include <QRunnable>
+#include <QSslCertificate>
 #include <QStringList>
 
 #include "base/path.h"
@@ -59,6 +60,7 @@ namespace BitTorrent
         int pieceSize = 0;
         Path inputPath;
         Path savePath;
+        QSslCertificate rootCert;
         QString comment;
         QString source;
         QStringList trackers;
