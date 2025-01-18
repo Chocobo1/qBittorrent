@@ -30,28 +30,28 @@
 #include "bytearray.h"
 
 #include <QByteArray>
+#include <QByteArrayMatcher>
 #include <QByteArrayView>
 #include <QList>
 
-QList<QByteArrayView> Utils::ByteArray::splitToViews(const QByteArrayView in, const QByteArrayView sep, const Qt::SplitBehavior behavior)
+QList<QByteArrayView> Utils::ByteArray::splitToViews(const QByteArrayView in, const QByteArrayView sep)
 {
-    if (sep.isEmpty())
+    if (sep.isEmpty() && !in.isEmpty())
         return {in};
 
+    const QByteArrayMatcher matcher {sep};
     QList<QByteArrayView> ret;
-    ret.reserve((behavior == Qt::KeepEmptyParts)
-                ? (1 + (in.size() / sep.size()))
-                : (1 + (in.size() / (sep.size() + 1))));
-    int head = 0;
+    ret.reserve(1 + (in.size() / (sep.size() + 1)));
+    qsizetype head = 0;
     while (head < in.size())
     {
-        int end = in.indexOf(sep, head);
+        qsizetype end = matcher.indexIn(in, head);
         if (end < 0)
             end = in.size();
 
         // omit empty parts
-        const QByteArrayView part = in.mid(head, (end - head));
-        if (!part.isEmpty() || (behavior == Qt::KeepEmptyParts))
+        const QByteArrayView part = in.sliced(head, (end - head));
+        if (!part.isEmpty())
             ret += part;
 
         head = end + sep.size();
