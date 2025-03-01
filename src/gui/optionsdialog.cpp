@@ -1447,7 +1447,11 @@ void OptionsDialog::initializeLanguageCombo()
     const QStringList langFiles = QDir(u":/lang"_s).entryList({u"qbittorrent_*.qm"_s}, QDir::Files, QDir::Name);
     for (const QString &langFile : langFiles)
     {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        const QString langCode = QStringView(langFile).slice(12).chopped(3).toString(); // remove "qbittorrent_" and ".qm"
+#else
         const QString langCode = QStringView(langFile).sliced(12).chopped(3).toString(); // remove "qbittorrent_" and ".qm"
+#endif
         m_ui->comboLanguage->addItem(Utils::Misc::languageToLocalizedString(langCode), langCode);
     }
 }
@@ -1856,10 +1860,10 @@ void OptionsDialog::setLocale(const QString &localeStr)
     if (index < 0)
     {
         //Attempt to find a language match without a country
-        int pos = name.indexOf(u'_');
+        const int pos = name.indexOf(u'_');
         if (pos > -1)
         {
-            QString lang = name.left(pos);
+            const QString lang = name.first(pos);
             index = m_ui->comboLanguage->findData(lang, Qt::UserRole);
         }
     }
