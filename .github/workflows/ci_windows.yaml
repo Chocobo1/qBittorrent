@@ -14,6 +14,7 @@ jobs:
     runs-on: ${{ matrix.config.os }}
     permissions:
       actions: write  # Chocobo1/setup-ccache-action
+      packages: write  # vcpkg nuget caching
 
     strategy:
       fail-fast: false
@@ -36,6 +37,7 @@ jobs:
       boost_path: "${{ github.workspace }}/../boost"
       libtorrent_path: "${{ github.workspace }}/../libtorrent"
       vcpkg_path: "c:/vcpkg"
+      vcpkg_cache_feed_url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
     steps:
       - name: Checkout repository
@@ -65,16 +67,20 @@ jobs:
           ccache_options: |
             max_size=1G
 
-      # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
-      - name: Set variables for vcpkg
-        uses: actions/github-script@v8
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', (process.env.ACTIONS_CACHE_URL || ''));
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', (process.env.ACTIONS_RUNTIME_TOKEN || ''));
-
       - name: Install dependencies with vcpkg
         run: |
+          # add caching sources
+          # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-packages
+          .$(${{ env.vcpkg_path }}/vcpkg.exe fetch nuget) `
+            sources add `
+              -Source "${{ env.vcpkg_cache_feed_url }}" `
+              -StorePasswordInClearText `
+              -Name GitHubPackages `
+              -UserName "${{ github.repository_owner }}" `
+              -Password "${{ secrets.GITHUB_TOKEN }}"
+          .$(${{ env.vcpkg_path }}/vcpkg.exe fetch nuget) `
+            setapikey "${{ secrets.GITHUB_TOKEN }}" `
+              -Source "${{ env.vcpkg_cache_feed_url }}"
           # create our own triplet
           New-Item `
             -Force `
@@ -96,7 +102,7 @@ jobs:
             --no-dry-run `
             --overlay-triplets="${{ env.vcpkg_path }}/triplets_overlay"
           ${{ env.vcpkg_path }}/vcpkg.exe install `
-            --binarysource="clear;x-gha,readwrite" `
+            --binarysource="clear;nuget,${{ env.vcpkg_cache_feed_url }},readwrite" `
             --clean-after-build `
             --overlay-triplets="${{ env.vcpkg_path }}/triplets_overlay" `
             $packages
