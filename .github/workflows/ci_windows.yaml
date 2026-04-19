@@ -13,7 +13,7 @@ jobs:
     name: Build (${{ matrix.libtorrent.version }}, ${{ matrix.config.arch }})
     runs-on: ${{ matrix.config.os }}
     permissions:
-      actions: write
+      actions: write  # Chocobo1/setup-ccache-action
 
     strategy:
       fail-fast: false
@@ -56,6 +56,14 @@ jobs:
           }
           where.exe ninja
           ninja --version
+
+      - name: Setup ccache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          store_cache: ${{ (github.repository != 'qbittorrent/qBittorrent') || (github.ref == 'refs/heads/master') }}
+          windows_compile_environment: msvc
+          ccache_options: |
+            max_size=1G
 
       # https://learn.microsoft.com/en-us/vcpkg/users/binarycaching#gha
       - name: Set variables for vcpkg
@@ -137,6 +145,7 @@ jobs:
             -B build `
             -G "Ninja" `
             -DCMAKE_BUILD_TYPE=RelWithDebInfo `
+            -DCMAKE_CXX_COMPILER_LAUNCHER="${{ env.ccache_symlinks_path }}" `
             -DCMAKE_CXX_STANDARD=20 `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
             -DCMAKE_INSTALL_PREFIX="${{ env.libtorrent_path }}/install" `
@@ -156,6 +165,7 @@ jobs:
             -B build `
             -G "Ninja" `
             -DCMAKE_BUILD_TYPE=RelWithDebInfo `
+            -DCMAKE_CXX_COMPILER_LAUNCHER="${{ env.ccache_symlinks_path }}" `
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
             -DCMAKE_TOOLCHAIN_FILE="${{ env.vcpkg_path }}/scripts/buildsystems/vcpkg.cmake" `
             -DBOOST_ROOT="${{ env.boost_path }}/lib/cmake" `
