@@ -424,13 +424,10 @@ void WebApplication::processAPIRequest(const QString &endpoint, const Http::Head
                 response.content = result.data.toJsonDocument().toJson(QJsonDocument::Compact);
                 break;
             case QMetaType::QByteArray:
-                {
-                    const auto resultData = result.data.toByteArray();
-                    response.headers.insert(Http::HEADER_CONTENT_TYPE, (!result.mimeType.isEmpty() ? result.mimeType : Http::CONTENT_TYPE_TXT));
-                    if (!result.filename.isEmpty())
-                        response.headers.insert(Http::HEADER_CONTENT_DISPOSITION, u"attachment; filename=\"%1\""_s.arg(result.filename));
-                    response.content = resultData;
-                }
+                response.headers.insert(Http::HEADER_CONTENT_TYPE, (!result.mimeType.isEmpty() ? result.mimeType : Http::CONTENT_TYPE_TXT));
+                if (!result.filename.isEmpty())
+                    response.headers.insert(Http::HEADER_CONTENT_DISPOSITION, u"attachment; filename=\"%1\""_s.arg(result.filename));
+                response.content = result.data.toByteArray();
                 break;
             case QMetaType::QString:
             default:
