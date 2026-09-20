@@ -229,7 +229,8 @@ bool SearchHandler::parseSearchResult(const QByteArrayView line, SearchResult &s
         searchResult.nbLeechers = -1;
 
     searchResult.siteUrl = QString::fromUtf8(parts.at(PL_ENGINE_URL).trimmed()); // Search engine site URL
-    searchResult.engineName = m_manager->pluginNameBySiteURL(searchResult.siteUrl); // Search engine name
+    searchResult.engineName = m_manager->findName(searchResult.siteUrl); // Search engine name
+    searchResult.engineFullName = m_manager->findFullName(searchResult.siteUrl); // Search engine full name
 
     if (nbFields > PL_DESC_LINK)
         searchResult.descrLink = QString::fromUtf8(parts.at(PL_DESC_LINK).trimmed()); // Description Link
